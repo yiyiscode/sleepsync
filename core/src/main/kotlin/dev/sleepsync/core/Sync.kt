@@ -37,20 +37,40 @@ sealed interface SyncResult {
 /** The single entry point the UI calls. */
 fun sync(source: SleepSource, store: SleepStore): SyncResult {
     val byMonth = source.sessionsStartingAfter(null)
+        .distinctBy { it.start.toInstant() } // Health Connect returns every segment twice
         .groupBy { YearMonth.from(it.start) } // month of the session's own local start
         .toSortedMap()
+    val months = mutableListOf<YearMonth>()
+    var added = 0
     for ((month, sessions) in byMonth) {
-        store.write(month, SleepCsv.encode(sessions))
+        val existing = store.read(month)?.let(SleepCsv::rows).orEmpty()
+        val stored = existing.map(SleepCsv::startOf).toSet()
+        val fresh = sessions.filter { it.start.toInstant() !in stored }
+        if (fresh.isEmpty()) continue
+        store.write(month, SleepCsv.merge(existing, fresh))
+        months += month
+        added += fresh.size
     }
-    return SyncResult.Synced(byMonth.values.sumOf { it.size }, byMonth.keys.toList())
+    return if (added == 0) SyncResult.UpToDate else SyncResult.Synced(added, months)
 }
 
 /** The CSV contract from docs/specs/sleepsync-v1.md. */
 object SleepCsv {
     const val HEADER = "start,end,in_bed_min,asleep_min,light_min,deep_min,rem_min,awake_min,source_app"
 
-    fun encode(sessions: List<SleepSession>): String =
-        (listOf(HEADER) + sessions.sortedBy { it.start.toInstant() }.map(::row)).joinToString("\n", postfix = "\n")
+    fun encode(sessions: List<SleepSession>): String = merge(emptyList(), sessions)
+
+    /** Data lines of a month file, kept as the original strings so they are rewritten byte-for-byte. */
+    fun rows(csv: String): List<String> = csv.lines().drop(1).filter { it.isNotEmpty() }
+
+    fun startOf(row: String): Instant = OffsetDateTime.parse(row.substringBefore(',')).toInstant()
+
+    /** Existing rows untouched plus new sessions, sorted by start. */
+    fun merge(existing: List<String>, sessions: List<SleepSession>): String =
+        (existing.map { startOf(it) to it } + sessions.map { it.start.toInstant() to row(it) })
+            .sortedBy { it.first }
+            .let { listOf(HEADER) + it.map { (_, line) -> line } }
+            .joinToString("\n", postfix = "\n")
 
     private fun row(s: SleepSession): String = listOf(
         DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(s.start),
