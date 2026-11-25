@@ -3,7 +3,6 @@ name: Release
 on:
   push:
     tags: ['v*']
-    branches: ['ticket/19-release-pipeline'] # TEMP dry-run trigger, remove
   # DRY RUN ONLY: builds an UNSIGNED release APK to prove the build works.
   # Never signs, never publishes a GitHub Release.
   workflow_dispatch:
