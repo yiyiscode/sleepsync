@@ -33,15 +33,7 @@ class HealthConnectUnavailableException : Exception("Health Connect is missing o
 class SleepPermissionMissingException : Exception("Sleep read permission not granted")
 class SignInRequiredException : Exception("Google sign-in missing or expired")
 
-/** Ports throw these when setup is missing; [sync] turns them into results. */
-class HealthConnectUnavailableException : Exception("Health Connect is missing or needs an update")
-class SleepPermissionMissingException : Exception("Sleep read permission not granted")
-class SignInRequiredException : Exception("Google sign-in missing or expired")
-
 sealed interface SyncResult {
-    data object NeedsHealthConnect : SyncResult
-    data object NeedsHealthConnectPermission : SyncResult
-    data object NeedsSignIn : SyncResult
     data object NeedsHealthConnect : SyncResult
     data object NeedsHealthConnectPermission : SyncResult
     data object NeedsSignIn : SyncResult
