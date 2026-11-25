@@ -20,7 +20,8 @@ Decisions already made (record changes as ADRs, don't silently revisit):
 
 ## Workflow
 - Repo: public GitHub `yiyiscode/sleepsync`, default branch `main`. Tickets are GitHub Issues, linked to the spec issue; dependencies are written as "Blocked by #n" in the body.
-- Labels: `ready-for-agent` (agents implement, the user reviews the PR) and `ready-for-human` (the user writes it; Claude coaches instead of writing the code). The Sync core is `ready-for-human`: it is where the learning happens.
+- Roles (changed 2026-11-26): the user does not write code. Claude implements every ticket test-first (red commit, then green commit, so CI shows both), opens the PR, and explains the GitHub flow; the user reviews and merges. The learning is in reviewing PRs and the GitHub flow, not in writing Kotlin.
+- Labels: `ready-for-agent` (Claude implements, the user reviews the PR) is the default for code tickets. `ready-for-human` is only for steps Claude cannot do: accounts, secrets, testing on the phone.
 - Every change lands through a PR that closes its issue. CI must be green before merge.
 
 ## Open questions
