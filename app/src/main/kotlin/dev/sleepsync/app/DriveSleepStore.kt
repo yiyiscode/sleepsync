@@ -1,5 +1,6 @@
 package dev.sleepsync.app
 
+import dev.sleepsync.core.SignInRequiredException
 import dev.sleepsync.core.SleepStore
 import java.net.HttpURLConnection
 import java.net.URL
@@ -50,6 +51,7 @@ class DriveSleepStore(private val accessToken: String) : SleepStore {
                 c.setRequestProperty("Content-Type", "$contentType; charset=UTF-8")
                 c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             }
+            if (c.responseCode == 401) throw SignInRequiredException()
             if (c.responseCode !in 200..299) {
                 error("Drive ${c.responseCode}: ${c.errorStream?.bufferedReader()?.readText()}")
             }

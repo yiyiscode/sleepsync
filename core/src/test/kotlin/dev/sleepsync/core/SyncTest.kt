@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import java.time.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SyncTest {
     private val header = "start,end,in_bed_min,asleep_min,light_min,deep_min,rem_min,awake_min,source_app"
@@ -80,5 +81,36 @@ class SyncTest {
             SyncResult.Synced(3, listOf(YearMonth.of(2026, 10), YearMonth.of(2026, 11))),
             result,
         )
+    }
+
+    // Setup failures: each missing piece maps to its own result so the UI can offer its own recovery.
+
+    private val oneNight = FakeSleepSource(listOf(session("2026-11-01T00:30:00+08:00", "2026-11-01T07:00:00+08:00")))
+
+    @Test
+    fun healthConnectMissingOrOutdatedMapsToItsOwnResult() {
+        val result = sync(FailingSleepSource(HealthConnectUnavailableException()), FakeSleepStore())
+
+        assertEquals(SyncResult.NeedsHealthConnect, result)
+    }
+
+    @Test
+    fun deniedOrRevokedSleepPermissionMapsToNeedsPermissionOnEverySync() {
+        val source = FailingSleepSource(SleepPermissionMissingException())
+
+        assertEquals(SyncResult.NeedsHealthConnectPermission, sync(source, FakeSleepStore()))
+        assertEquals(SyncResult.NeedsHealthConnectPermission, sync(source, FakeSleepStore()))
+    }
+
+    @Test
+    fun cancelledOrExpiredSignInMapsToNeedsSignInAndWritesNothing() {
+        val store = FailingSleepStore(SignInRequiredException())
+
+        assertEquals(SyncResult.NeedsSignIn, sync(oneNight, store))
+    }
+
+    @Test
+    fun unrelatedFailuresStillPropagate() {
+        assertFailsWith<IllegalStateException> { sync(FailingSleepSource(IllegalStateException("boom")), FakeSleepStore()) }
     }
 }

@@ -28,12 +28,39 @@ interface SleepStore {
     fun write(month: YearMonth, csv: String)
 }
 
+/** Ports throw these when setup is missing; [sync] turns them into results. */
+class HealthConnectUnavailableException : Exception("Health Connect is missing or needs an update")
+class SleepPermissionMissingException : Exception("Sleep read permission not granted")
+class SignInRequiredException : Exception("Google sign-in missing or expired")
+
+/** Ports throw these when setup is missing; [sync] turns them into results. */
+class HealthConnectUnavailableException : Exception("Health Connect is missing or needs an update")
+class SleepPermissionMissingException : Exception("Sleep read permission not granted")
+class SignInRequiredException : Exception("Google sign-in missing or expired")
+
 sealed interface SyncResult {
+    data object NeedsHealthConnect : SyncResult
+    data object NeedsHealthConnectPermission : SyncResult
+    data object NeedsSignIn : SyncResult
+    data object NeedsHealthConnect : SyncResult
+    data object NeedsHealthConnectPermission : SyncResult
+    data object NeedsSignIn : SyncResult
+
     data class Synced(val nightsAdded: Int, val months: List<YearMonth>) : SyncResult
 }
 
 /** The single entry point the UI calls. */
-fun sync(source: SleepSource, store: SleepStore): SyncResult {
+fun sync(source: SleepSource, store: SleepStore): SyncResult = try {
+    syncOrThrow(source, store)
+} catch (_: HealthConnectUnavailableException) {
+    SyncResult.NeedsHealthConnect
+} catch (_: SleepPermissionMissingException) {
+    SyncResult.NeedsHealthConnectPermission
+} catch (_: SignInRequiredException) {
+    SyncResult.NeedsSignIn
+}
+
+private fun syncOrThrow(source: SleepSource, store: SleepStore): SyncResult {
     val byMonth = source.sessionsStartingAfter(null)
         .groupBy { YearMonth.from(it.start) } // month of the session's own local start
         .toSortedMap()
