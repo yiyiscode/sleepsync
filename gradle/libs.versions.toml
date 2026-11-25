@@ -1,0 +1,21 @@
+[versions]
+agp = "8.9.2"
+kotlin = "2.1.20"
+composeBom = "2025.04.01"
+activityCompose = "1.10.1"
+
+[libraries]
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+health-connect = { module = "androidx.health.connect:connect-client", version = "1.1.0" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version = "21.3.0" }
+coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version = "1.10.2" }
+kotlin-test ={ module = "org.jetbrains.kotlin:kotlin-test" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
