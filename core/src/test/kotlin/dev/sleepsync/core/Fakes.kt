@@ -16,3 +16,13 @@ class FakeSleepStore : SleepStore {
         files[month] = csv
     }
 }
+
+class FakeStatusStore : StatusStore {
+    var saved: SyncStatus? = null
+
+    override fun load(): SyncStatus? = saved
+
+    override fun save(status: SyncStatus) {
+        saved = status
+    }
+}

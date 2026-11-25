@@ -27,8 +27,13 @@ import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import dev.sleepsync.core.AppInfo
-import dev.sleepsync.core.SyncResult
-import dev.sleepsync.core.sync
+import dev.sleepsync.core.SyncStatus
+import dev.sleepsync.core.message
+import dev.sleepsync.core.syncAndRecord
+import android.content.ClipData
+import android.content.ClipboardManager
+import androidx.compose.material3.TextButton
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,6 +41,8 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     private var status by mutableStateOf("Ready")
     private var busy by mutableStateOf(false)
+    private var lastStatus by mutableStateOf<SyncStatus?>(null)
+    private var failure by mutableStateOf<String?>(null)
 
     private val readSleep = HealthPermission.getReadPermission(SleepSessionRecord::class)
 
@@ -56,6 +63,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lastStatus = PrefsStatusStore(this).load()
         setContent {
             MaterialTheme {
                 Column(
@@ -73,17 +81,29 @@ class MainActivity : ComponentActivity() {
                     )
                     Button(onClick = ::onSyncClicked, enabled = !busy) { Text("Sync") }
                     Text(status, modifier = Modifier.padding(top = 16.dp))
+                    Text(
+                        lastStatus?.let { "Last sync: ${it.lastSyncAt}; newest night: ${it.newestNight ?: "none"}" }
+                            ?: "Never synced",
+                    )
+                    failure?.let { reason ->
+                        TextButton(onClick = {
+                            (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
+                                .setPrimaryClip(ClipData.newPlainText("SleepSync error", reason))
+                        }) { Text("Copy error reason") }
+                    }
                 }
             }
         }
     }
 
-    private fun report(message: String) {
+    private fun report(message: String, error: Boolean = true) {
         status = message
+        failure = if (error) "SleepSync ${BuildConfig.VERSION_NAME}: $message" else null
         busy = false
     }
 
     private fun onSyncClicked() {
+        if (busy) return
         busy = true
         status = "Syncing..."
         lifecycleScope.launch {
@@ -120,23 +140,22 @@ class MainActivity : ComponentActivity() {
 
     private fun runSync(token: String) {
         lifecycleScope.launch {
-            val message = try {
+            val statuses = PrefsStatusStore(this@MainActivity)
+            try {
                 val result = withContext(Dispatchers.IO) {
-                    sync(
+                    syncAndRecord(
                         HealthConnectSleepSource(HealthConnectClient.getOrCreate(this@MainActivity)),
                         DriveSleepStore(token),
+                        statuses,
+                        Instant.now(),
                     )
                 }
-                describe(result)
+                lastStatus = statuses.load()
+                report(result.message(), error = false)
             } catch (e: Exception) {
-                "Failed: ${e.message}"
+                report("Failed: ${e.message}")
             }
-            report(message)
         }
-    }
-
-    private fun describe(result: SyncResult): String = when (result) {
-        is SyncResult.Synced -> "Synced ${result.nightsAdded} nights into ${result.months.joinToString()}"
     }
 
     private companion object {
