@@ -36,5 +36,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.activity.compose)
+    implementation(libs.health.connect)
+    implementation(libs.play.services.auth)
+    implementation(libs.coroutines.android)
     testImplementation(libs.kotlin.test)
 }
