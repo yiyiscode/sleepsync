@@ -20,9 +20,12 @@ class DriveSleepStore(private val accessToken: String) : SleepStore {
             ).getString("id")
     }
 
+    override fun read(month: YearMonth): String? =
+        findMonth(month)?.let { call("GET", "$API/files/$it?alt=media") }
+
     override fun write(month: YearMonth, csv: String) {
         val name = "sleep-$month.csv"
-        val existing = findId("name = '$name' and '$folderId' in parents and trashed = false")
+        val existing = findMonth(month)
         if (existing != null) {
             call("POST", "$UPLOAD/files/$existing?uploadType=media", "text/csv", csv, override = "PATCH")
         } else {
@@ -32,6 +35,9 @@ class DriveSleepStore(private val accessToken: String) : SleepStore {
             call("POST", "$UPLOAD/files?uploadType=multipart", "multipart/related; boundary=$BOUNDARY", body)
         }
     }
+
+    private fun findMonth(month: YearMonth): String? =
+        findId("name = 'sleep-$month.csv' and '$folderId' in parents and trashed = false")
 
     private fun findId(query: String): String? {
         val q = URLEncoder.encode(query, "UTF-8")

@@ -23,13 +23,15 @@ interface SleepSource {
     fun sessionsStartingAfter(after: Instant?): List<SleepSession>
 }
 
-/** Where month files are written. */
+/** Where month files are read and written. `read` returns null when the month has no file yet. */
 interface SleepStore {
+    fun read(month: YearMonth): String?
     fun write(month: YearMonth, csv: String)
 }
 
 sealed interface SyncResult {
     data class Synced(val nightsAdded: Int, val months: List<YearMonth>) : SyncResult
+    data object UpToDate : SyncResult
 }
 
 /** The single entry point the UI calls. */
