@@ -1,11 +1,11 @@
 # Spec: SleepSync v1: manual sleep sync to Google Drive
 
-Status: ready-for-agent (local file; move to the issue tracker once one is set up)
+Status: ready-for-agent. Tracked as GitHub issue #1; tickets are its sub-issues.
 Date: 2026-11-25
 
 ## Problem Statement
 
-I sleep badly and want an AI to help me find patterns, such as whether late bedtimes cut my deep sleep. My phone already records each night in Health Connect, but that data is locked on the phone. Claude can read my Google Drive through its connector, yet nothing gets the sleep data there. Copying it by hand every morning is tedious and error-prone, so I don't do it, and Claude never sees more than a night or two.
+I sleep badly and want an AI to help me find patterns, such as whether late bedtimes cut my deep sleep. My phone records each night in Health Connect, and an exporter app already drops it into Google Drive, which Claude can read through its connector. But that export is unusable for analysis: it holds raw per-stage segments rather than one row per night, every segment appears twice, and it is split across one file per day plus overlapping 30-day range files with no time zone. Claude has to reassemble and deduplicate everything before it can answer a simple question about my sleep.
 
 ## Solution
 
@@ -77,7 +77,7 @@ SleepSync is a personal Android app with one main action: **Sync**. When I tap i
   - *Offline*
   - *Partially synced* (which months failed and why)
   - *Month file unreadable* (which month)
-- **Deduplication key** is the session start instant. A night whose start already exists in the month file is skipped. Existing rows are never modified or removed: merging only appends, then the file is re-sorted by start.
+- **Deduplication key** is the session start instant. A night whose start already exists in the month file is skipped, and so is a repeat of the same start within one batch (real Health Connect data returned every segment twice). Existing rows are never modified or removed: merging only appends, then the file is re-sorted by start.
 - **Month assignment** uses the session's start time in the time zone recorded with the session, falling back to the device zone.
 - **CSV contract** (one header row; columns in this order):
   - `start`, `end`: ISO 8601 with offset
@@ -128,6 +128,6 @@ SleepSync is a personal Android app with one main action: **Sync**. When I tap i
 
 ## Further Notes
 
-- **Unverified risk:** Health Connect may expose only about 30 days of history before the app's first permission grant. Verify on the phone during the Plan phase. If it holds, the first sync's backfill is limited, and that is acceptable.
-- **Naps:** each session becomes its own row, so naps appear alongside nights. Claude can filter them by duration. If that proves noisy in real use, it is a v1.x issue, not a v1 blocker.
+- **History (checked 2026-11-25, issue #2):** an existing 30-day export held only ~6 days of sleep data, so the first backfill will be small. Whether Health Connect caps history at ~30 days is still unconfirmed and no longer matters for v1.
+- **Naps:** several sessions per day are common in real data. Decision: one row per session; Claude can filter by duration. Revisit after real use.
 - **Data safety:** CLAUDE.md lists the decisions this spec relies on. Record any change to the CSV contract as an ADR, since Claude's analyses depend on it.
