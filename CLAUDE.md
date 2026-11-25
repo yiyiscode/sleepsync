@@ -1,7 +1,7 @@
 # Development Process — SleepSync
 
 ## Language
-Communicate in English in this project (replies, docs, code comments, commit messages). This overrides the global Traditional Chinese default.
+The user writes in English to practice it; reply in Traditional Chinese (繁體中文). Repo artifacts stay in English: docs, code, comments, commit messages, issues and PRs.
 
 ## Purpose
 This is a learning project: the goal is to practice the full software lifecycle (plan → design → implement → test → deploy → maintain) on one real app. When helping, name which lifecycle phase the current work belongs to and keep each phase's artifact (requirements, ADR, tests, release notes, retro) instead of skipping straight to code.
