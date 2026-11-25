@@ -1,13 +1,9 @@
-*.iml
 .gradle/
+build/
 local.properties
 .idea/
-build/
-captures/
-.externalNativeBuild/
-.cxx/
+*.iml
 .kotlin/
-# signing secrets never enter the repo; CI reads them from GitHub Secrets
+*.apk
 *.jks
 *.keystore
-keystore.properties
