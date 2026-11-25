@@ -81,4 +81,58 @@ class SyncTest {
             result,
         )
     }
+
+    @Test
+    fun secondSyncWithSameSourceAddsNothingAndIsUpToDate() {
+        val source = FakeSleepSource(listOf(session("2026-11-24T23:40:00+08:00", "2026-11-25T07:10:00+08:00")))
+        val store = FakeSleepStore()
+        sync(source, store)
+        val afterFirst = store.files.toMap()
+
+        val result = sync(source, store)
+
+        assertEquals(afterFirst, store.files)
+        assertEquals(SyncResult.UpToDate, result)
+    }
+
+    @Test
+    fun sameSessionTwiceInOneBatchIsWrittenOnce() {
+        val night = session("2026-11-24T23:40:00+08:00", "2026-11-25T07:10:00+08:00")
+        val store = FakeSleepStore()
+
+        val result = sync(FakeSleepSource(listOf(night, night)), store)
+
+        assertEquals(
+            "$header\n2026-11-24T23:40:00+08:00,2026-11-25T07:10:00+08:00,450,420,,,,,com.example.tracker\n",
+            store.files[YearMonth.of(2026, 11)],
+        )
+        assertEquals(SyncResult.Synced(1, listOf(YearMonth.of(2026, 11))), result)
+    }
+
+    @Test
+    fun existingRowsArePreservedByteForByteAndNewRowsMergeByStart() {
+        // Written in a form the encoder would not produce (no seconds, quoted app), so re-encoding would change it.
+        val existingRow = "2026-11-10T23:00+08:00,2026-11-11T06:00+08:00,420,400,,,,,\"com.example.tracker\""
+        val november = YearMonth.of(2026, 11)
+        val store = FakeSleepStore().apply { files[november] = "$header\n$existingRow\n" }
+        val source = FakeSleepSource(
+            listOf(
+                session("2026-11-12T00:00:00+08:00", "2026-11-12T07:00:00+08:00"),
+                session("2026-11-05T23:30:00+08:00", "2026-11-06T06:30:00+08:00"),
+                // same start instant as the existing row, written in another offset: already stored
+                session("2026-11-10T15:00:00Z", "2026-11-10T22:00:00Z"),
+            ),
+        )
+
+        val result = sync(source, store)
+
+        assertEquals(
+            "$header\n" +
+                "2026-11-05T23:30:00+08:00,2026-11-06T06:30:00+08:00,450,420,,,,,com.example.tracker\n" +
+                "$existingRow\n" +
+                "2026-11-12T00:00:00+08:00,2026-11-12T07:00:00+08:00,450,420,,,,,com.example.tracker\n",
+            store.files[november],
+        )
+        assertEquals(SyncResult.Synced(2, listOf(november)), result)
+    }
 }

@@ -12,6 +12,8 @@ class FakeSleepSource(private val sessions: List<SleepSession>) : SleepSource {
 class FakeSleepStore : SleepStore {
     val files = mutableMapOf<YearMonth, String>()
 
+    override fun read(month: YearMonth): String? = files[month]
+
     override fun write(month: YearMonth, csv: String) {
         files[month] = csv
     }

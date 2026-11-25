@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
 
     private fun describe(result: SyncResult): String = when (result) {
         is SyncResult.Synced -> "Synced ${result.nightsAdded} nights into ${result.months.joinToString()}"
+        SyncResult.UpToDate -> "Already up to date"
     }
 
     private companion object {
