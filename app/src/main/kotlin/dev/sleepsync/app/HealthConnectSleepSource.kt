@@ -26,7 +26,8 @@ class HealthConnectSleepSource(private val client: HealthConnectClient) : SleepS
                 ),
             )
             out += response.records.map(::toSession)
-            pageToken = response.pageToken
+            // Health Connect returns "" (not null) on the last page; "" means "first page" again.
+            pageToken = response.pageToken?.takeIf { it.isNotEmpty() }
         } while (pageToken != null)
         out
     }
