@@ -1,5 +1,6 @@
 package dev.sleepsync.app
 
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -17,6 +18,7 @@ class HealthConnectSleepSource(private val client: HealthConnectClient) : SleepS
     override fun sessionsStartingAfter(after: Instant?): List<SleepSession> = runBlocking {
         val out = mutableListOf<SleepSession>()
         var pageToken: String? = null
+        var pages = 0
         do {
             val response = client.readRecords(
                 ReadRecordsRequest(
@@ -26,7 +28,11 @@ class HealthConnectSleepSource(private val client: HealthConnectClient) : SleepS
                 ),
             )
             out += response.records.map(::toSession)
-            pageToken = response.pageToken
+            pages++
+            Log.d("SleepSyncHC", "page=$pages records=${response.records.size} nextToken=${response.pageToken?.take(12)}")
+            // Experiment: stop on an empty page, a repeated token, or too many pages.
+            val next = response.pageToken
+            pageToken = if (response.records.isEmpty() || next == pageToken || pages >= 20) null else next
         } while (pageToken != null)
         out
     }
