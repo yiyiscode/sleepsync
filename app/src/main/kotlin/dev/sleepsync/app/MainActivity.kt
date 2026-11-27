@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -44,13 +45,14 @@ class MainActivity : ComponentActivity() {
 
     private val readSleep = HealthPermission.getReadPermission(SleepSessionRecord::class)
 
-    private val grantPermission = Recovery("Grant permission") { healthPermission.launch(setOf(readSleep)) }
+    private val grantPermission: Recovery = Recovery("Grant permission") { healthPermission.launch(setOf(readSleep)) }
     private val signIn = Recovery("Sign in with Google") { onSyncClicked() }
     private val getHealthConnect = Recovery("Get Health Connect") {
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")))
     }
 
-    private val healthPermission = registerForActivityResult(
+    // Explicit types: grantPermission and healthPermission refer to each other.
+    private val healthPermission: ActivityResultLauncher<Set<String>> = registerForActivityResult(
         PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
         if (readSleep in granted) {
