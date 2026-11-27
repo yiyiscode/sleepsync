@@ -16,3 +16,12 @@ class FakeSleepStore : SleepStore {
         files[month] = csv
     }
 }
+
+/** A source or store that fails the way a missing setup does. */
+class FailingSleepSource(private val failure: Exception) : SleepSource {
+    override fun sessionsStartingAfter(after: Instant?): List<SleepSession> = throw failure
+}
+
+class FailingSleepStore(private val failure: Exception) : SleepStore {
+    override fun write(month: YearMonth, csv: String) = throw failure
+}
