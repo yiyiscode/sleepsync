@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
+import android.util.Log
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -38,11 +40,13 @@ class MainActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
 
     private val readSleep = HealthPermission.getReadPermission(SleepSessionRecord::class)
+    private val readBackground = HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 
     private val healthPermission = registerForActivityResult(
         PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
-        if (readSleep in granted) authorizeDrive() else report("Health Connect sleep permission was not granted")
+        // spike: show what Health Connect granted.
+        report("SPIKE granted: sleep=${readSleep in granted} background=${readBackground in granted}")
     }
 
     private val driveConsent = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
@@ -92,8 +96,15 @@ class MainActivity : ComponentActivity() {
                     report("Health Connect is not available or needs an update")
                     return@launch
                 }
-                val granted = HealthConnectClient.getOrCreate(this@MainActivity).permissionController.getGrantedPermissions()
-                if (readSleep in granted) authorizeDrive() else healthPermission.launch(setOf(readSleep))
+                // spike (#27): is background read available, and can it be granted?
+                val client = HealthConnectClient.getOrCreate(this@MainActivity)
+                val feature = client.features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
+                val available = feature == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+                val granted = client.permissionController.getGrantedPermissions()
+                Log.d("SleepSyncBG", "feature=$feature available=$available granted=$granted")
+                if (!available) report("SPIKE background feature status=$feature (not available)")
+                else if (readBackground in granted) report("SPIKE background available and already granted")
+                else healthPermission.launch(setOf(readSleep, readBackground))
             } catch (e: Exception) {
                 report("Failed: ${e.message}")
             }
